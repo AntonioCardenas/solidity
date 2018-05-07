@@ -131,6 +131,8 @@ private:
 	void popBlockScopedVariables(ASTNode const* _node);
 	void popLoopScopedVariables(ASTNode const* _node);
 
+	void freeLocalLoopVariables(std::shared_ptr<eth::AssemblyItem> jumpTo = nullptr);
+
 	bool const m_optimise;
 	/// Pointer to the runtime compiler in case this is a creation compiler.
 	ContractCompiler* m_runtimeCompiler = nullptr;

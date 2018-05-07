@@ -691,6 +691,9 @@ bool ContractCompiler::visit(WhileStatement const& _whileStatement)
 	m_loops.pop();
 
 	m_context.appendJumpTo(loopStart);
+
+	freeLocalLoopVariables();
+
 	m_context << loopEnd;
 
 	m_continueTags.pop_back();
@@ -737,25 +740,12 @@ bool ContractCompiler::visit(ForStatement const& _forStatement)
 
 	m_context.appendJumpTo(loopStart);
 
-	// Block of pops with a tag for each break statement
-	sort(m_breakTagsPops.begin(), m_breakTagsPops.end());
-	auto outter = m_breakTagsPops.rbegin();
-	while (outter != m_breakTagsPops.rend())
+	shared_ptr<eth::AssemblyItem> afterFreeing;
+	if (m_breakTagsPops.size() > 0)
 	{
-		auto inner = outter;
-		for (; inner != m_breakTagsPops.rend() && inner->first == outter->first; ++inner)
-			m_context << inner->second;
-		unsigned pops = (inner == m_breakTagsPops.rend()) ? outter->first : (outter->first - inner->first);
-		while (pops--)
-			m_context << Instruction::POP;
-		outter = inner;
+		afterFreeing = make_shared<eth::AssemblyItem>(m_context.newTag());
+		freeLocalLoopVariables(afterFreeing);
 	}
-	m_breakTagsPops.clear();
-
-	// The for initialization variable was also freed by a potential break,
-	// so this should be skipped
-	eth::AssemblyItem afterFreeing = m_context.newTag();
-	m_context.appendJumpTo(afterFreeing);
 
 	m_context << loopEnd;
 
@@ -764,13 +754,13 @@ bool ContractCompiler::visit(ForStatement const& _forStatement)
 	popBlockScopedVariables(&_forStatement);
 
 	// Location where the break tags jump to
-	m_context << afterFreeing;
+	if (afterFreeing)
+		m_context << *afterFreeing;
 
 	m_continueTags.pop_back();
 	m_breakTags.pop_back();
 
-	// TODO adjust stack height manually
-	//checker.check();
+	checker.check();
 	return false;
 }
 
@@ -1055,5 +1045,29 @@ void ContractCompiler::popLoopScopedVariables(ASTNode const* _node)
 	{
 		CompilerContext::LocationSetter locationSetter(m_context, *_decl);
 		m_context << Instruction::POP;
+	}
+}
+
+void ContractCompiler::freeLocalLoopVariables(shared_ptr<eth::AssemblyItem> jumpTo)
+{
+	if (m_breakTagsPops.size() > 0)
+	{
+		// Block of pops with a tag for each break statement
+		sort(m_breakTagsPops.begin(), m_breakTagsPops.end());
+		auto outter = m_breakTagsPops.rbegin();
+		while (outter != m_breakTagsPops.rend())
+		{
+			auto inner = outter;
+			for (; inner != m_breakTagsPops.rend() && inner->first == outter->first; ++inner)
+				m_context << inner->second;
+			unsigned pops = (inner == m_breakTagsPops.rend()) ? outter->first : (outter->first - inner->first);
+			while (pops--)
+				m_context << Instruction::POP;
+			outter = inner;
+		}
+		m_context.adjustStackOffset(m_breakTagsPops.back().first);
+		m_breakTagsPops.clear();
+		if (jumpTo)
+			m_context.appendJumpTo(*jumpTo);
 	}
 }
