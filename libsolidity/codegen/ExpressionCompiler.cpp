@@ -1718,11 +1718,31 @@ void ExpressionCompiler::appendShiftOperatorCode(Token::Value _operator, Type co
 			m_context << u256(2) << Instruction::EXP << Instruction::MUL;
 		break;
 	case Token::SAR:
-		// NOTE: SAR rounds differently than SDIV
-		if (m_context.evmVersion().hasBitwiseShifting() && !c_valueSigned)
-			m_context << Instruction::SHR;
+		if (m_context.evmVersion().hasBitwiseShifting())
+			m_context << Instruction::SAR;
 		else
-			m_context << u256(2) << Instruction::EXP << Instruction::SWAP1 << (c_valueSigned ? Instruction::SDIV : Instruction::DIV);
+		{
+			// if signed and negative, calculate
+			// ~((~value_to_shift) / (2**shift_amount))
+			if (c_valueSigned)
+			{
+				// stack: value_to_shift shift_amount
+				m_context << u256(0) << Instruction::DUP3 << Instruction::SLT;
+				// stack: value_to_shift shift_amount (value_to_shift < 0)
+				m_context << u256(0) << Instruction::SUB;
+				// stack: value_to_shift shift_amount -(value_to_shift < 0)
+				m_context << Instruction::DUP1;
+				// stack: value_to_shift shift_amount -(value_to_shift < 0) -(value_to_shift < 0)
+				m_context << Instruction::SWAP3;
+				// stack: -(value_to_shift < 0) shift_amount -(value_to_shift < 0) value_to_shift
+				m_context << Instruction::XOR;
+				// stack: -(value_to_shift < 0) shift_amount [~]value_to_shift
+				m_context << Instruction::SWAP1;
+			}
+			m_context << u256(2) << Instruction::EXP << Instruction::SWAP1 << Instruction::DIV;
+			if (c_valueSigned)
+				m_context << Instruction::XOR;
+		}
 		break;
 	case Token::SHR:
 	default:

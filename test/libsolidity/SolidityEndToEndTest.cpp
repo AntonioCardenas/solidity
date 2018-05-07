@@ -10122,6 +10122,23 @@ BOOST_AUTO_TEST_CASE(shift_right_assignment)
 	ABI_CHECK(callContractFunction("f(uint256,uint256)", u256(0x4266), u256(17)), encodeArgs(u256(0)));
 }
 
+BOOST_AUTO_TEST_CASE(shift_right_assignment_signed)
+{
+	char const* sourceCode = R"(
+			contract C {
+				function f(int a, int b) returns (int) {
+					a >>= b;
+					return a;
+				}
+			}
+		)";
+	compileAndRun(sourceCode, 0, "C");
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(0x4266), u256(0)), encodeArgs(u256(0x4266)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(0x4266), u256(8)), encodeArgs(u256(0x42)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(0x4266), u256(16)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(0x4266), u256(17)), encodeArgs(u256(0)));
+}
+
 BOOST_AUTO_TEST_CASE(shift_right_negative_lvalue)
 {
 	char const* sourceCode = R"(
@@ -10133,9 +10150,29 @@ BOOST_AUTO_TEST_CASE(shift_right_negative_lvalue)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(0)), encodeArgs(u256(-4266)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(8)), encodeArgs(u256(-16)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(16)), encodeArgs(u256(0)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(17)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(1)), encodeArgs(u256(-2133)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(4)), encodeArgs(u256(-267)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(8)), encodeArgs(u256(-17)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(16)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(17)), encodeArgs(u256(-1)));
+}
+
+BOOST_AUTO_TEST_CASE(shift_right_negative_lvalue_16bit)
+{
+	char const* sourceCode = R"(
+			contract C {
+				function f(int16 a, int16 b) returns (int) {
+					return a >> b;
+				}
+			}
+		)";
+	compileAndRun(sourceCode, 0, "C");
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(0)), encodeArgs(u256(-4266)));
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(1)), encodeArgs(u256(-2133)));
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(4)), encodeArgs(u256(-267)));
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(8)), encodeArgs(u256(-17)));
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(16)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("f(int16,int16)", u256(-4266), u256(17)), encodeArgs(u256(-1)));
 }
 
 BOOST_AUTO_TEST_CASE(shift_right_negative_lvalue_assignment)
@@ -10150,9 +10187,11 @@ BOOST_AUTO_TEST_CASE(shift_right_negative_lvalue_assignment)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(0)), encodeArgs(u256(-4266)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(8)), encodeArgs(u256(-16)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(16)), encodeArgs(u256(0)));
-	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(17)), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(1)), encodeArgs(u256(-2133)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(4)), encodeArgs(u256(-267)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(8)), encodeArgs(u256(-17)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(16)), encodeArgs(u256(-1)));
+	ABI_CHECK(callContractFunction("f(int256,int256)", u256(-4266), u256(17)), encodeArgs(u256(-1)));
 }
 
 BOOST_AUTO_TEST_CASE(shift_negative_rvalue)

@@ -1,6 +1,7 @@
 ### 0.5.0 (unreleased)
 
 Features:
+ * General: Signed right shift uses proper arithmetic shift, i.e. rounding towards negative infinity.
 
 
 Bugfixes:
